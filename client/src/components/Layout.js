@@ -116,7 +116,7 @@ const Layout = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
+            {getMenuItems(user?.rol || 'personel').find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>
             Hoş geldin, {user?.kullanici_adi}

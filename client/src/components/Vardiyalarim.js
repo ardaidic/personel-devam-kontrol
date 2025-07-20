@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -29,9 +29,9 @@ const Vardiyalarim = () => {
 
   useEffect(() => {
     fetchVardiyalar();
-  }, [selectedAy, selectedYil]);
+  }, [fetchVardiyalar]);
 
-  const fetchVardiyalar = async () => {
+  const fetchVardiyalar = useCallback(async () => {
     try {
       const response = await axios.get(`/api/vardiya-planlari/${user.id}?ay=${selectedAy}&yil=${selectedYil}`);
       setVardiyalar(response.data);
@@ -40,7 +40,7 @@ const Vardiyalarim = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.id, selectedAy, selectedYil]);
 
   const formatTarih = (tarih) => {
     return new Date(tarih).toLocaleDateString('tr-TR', {

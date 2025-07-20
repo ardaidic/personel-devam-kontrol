@@ -10,23 +10,15 @@ import {
   Select,
   MenuItem,
   Grid,
-  Card,
-  CardContent,
   Divider
 } from '@mui/material';
-import {
-  AttachMoney as MoneyIcon,
-  Schedule as ScheduleIcon,
-  TrendingUp as TrendingUpIcon,
-  AccountBalance as AccountIcon
-} from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
 const Maasim = () => {
   const [maasBilgisi, setMaasBilgisi] = useState(null);
   const [avansBorc, setAvansBorc] = useState([]);
-  const [maasOdemeleri, setMaasOdemeleri] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedAy, setSelectedAy] = useState(new Date().getMonth() + 1);
@@ -36,7 +28,6 @@ const Maasim = () => {
   useEffect(() => {
     fetchMaasBilgisi();
     fetchAvansBorc();
-    fetchMaasOdemeleri();
   }, [selectedAy, selectedYil]);
 
   const fetchMaasBilgisi = async () => {
@@ -59,14 +50,7 @@ const Maasim = () => {
     }
   };
 
-  const fetchMaasOdemeleri = async () => {
-    try {
-      const response = await axios.get(`/api/maas-odemeleri/${user.id}`);
-      setMaasOdemeleri(response.data);
-    } catch (err) {
-      console.error('Maaş ödemeleri yüklenirken hata:', err);
-    }
-  };
+
 
   if (loading) {
     return (
