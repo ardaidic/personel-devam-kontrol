@@ -7,6 +7,8 @@ import Dashboard from './components/Dashboard';
 import PersonelList from './components/PersonelList';
 import DevamKayitlari from './components/DevamKayitlari';
 import MaasHesaplama from './components/MaasHesaplama';
+import Vardiyalarim from './components/Vardiyalarim';
+import Maasim from './components/Maasim';
 import Layout from './components/Layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -41,6 +43,8 @@ function AppRoutes() {
         <Route path="personel" element={<PersonelList />} />
         <Route path="devam-kayitlari" element={<DevamKayitlari />} />
         <Route path="maas-hesaplama" element={<MaasHesaplama />} />
+        <Route path="vardiyalarim" element={<Vardiyalarim />} />
+        <Route path="maasim" element={<Maasim />} />
       </Route>
     </Routes>
   );

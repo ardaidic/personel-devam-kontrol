@@ -28,12 +28,19 @@ import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
-const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-  { text: 'Personel', icon: <PeopleIcon />, path: '/personel' },
-  { text: 'Devam Kayıtları', icon: <ScheduleIcon />, path: '/devam-kayitlari' },
-  { text: 'Maaş Hesaplama', icon: <MoneyIcon />, path: '/maas-hesaplama' }
-];
+const getMenuItems = (userRole) => {
+  const allItems = [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/', roles: ['admin'] },
+    { text: 'Personel', icon: <PeopleIcon />, path: '/personel', roles: ['admin'] },
+    { text: 'Devam Kayıtları', icon: <ScheduleIcon />, path: '/devam-kayitlari', roles: ['admin'] },
+    { text: 'Maaş Hesaplama', icon: <MoneyIcon />, path: '/maas-hesaplama', roles: ['admin'] },
+    { text: 'Vardiyalarım', icon: <ScheduleIcon />, path: '/vardiyalarim', roles: ['personel'] },
+    { text: 'QR Kod Okut', icon: <ScheduleIcon />, path: '/qr-okut', roles: ['personel'] },
+    { text: 'Maaşım', icon: <MoneyIcon />, path: '/maasim', roles: ['personel'] }
+  ];
+  
+  return allItems.filter(item => item.roles.includes(userRole));
+};
 
 const Layout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -59,7 +66,7 @@ const Layout = () => {
       </Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item) => (
+        {getMenuItems(user?.rol || 'personel').map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
               selected={location.pathname === item.path}
