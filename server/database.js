@@ -90,7 +90,8 @@ const initDatabase = async () => {
           gunluk_calisma_saati DECIMAL(4,2) DEFAULT 8.0,
           aylik_izin_hakki INTEGER DEFAULT 14,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (personel_id) REFERENCES personel (id)
+          FOREIGN KEY (personel_id) REFERENCES personel (id),
+          UNIQUE(personel_id)
         )
       `);
 
@@ -171,7 +172,8 @@ const initDatabase = async () => {
           gunluk_calisma_saati REAL DEFAULT 8.0,
           aylik_izin_hakki INTEGER DEFAULT 14,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (personel_id) REFERENCES personel (id)
+          FOREIGN KEY (personel_id) REFERENCES personel (id),
+          UNIQUE(personel_id)
         )
       `);
 

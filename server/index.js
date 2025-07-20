@@ -497,18 +497,29 @@ app.post('/api/maas-ayarlari', authenticateToken, async (req, res) => {
   const { personel_id, saatlik_ucret, mesai_saati_ucret, gunluk_calisma_saati, aylik_izin_hakki } = req.body;
 
   try {
-    await pool.query(
-      `INSERT INTO maas_ayarlari 
-       (personel_id, saatlik_ucret, mesai_saati_ucret, gunluk_calisma_saati, aylik_izin_hakki) 
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (personel_id) 
-       DO UPDATE SET 
-         saatlik_ucret = EXCLUDED.saatlik_ucret,
-         mesai_saati_ucret = EXCLUDED.mesai_saati_ucret,
-         gunluk_calisma_saati = EXCLUDED.gunluk_calisma_saati,
-         aylik_izin_hakki = EXCLUDED.aylik_izin_hakki`,
-      [personel_id, saatlik_ucret, mesai_saati_ucret, gunluk_calisma_saati, aylik_izin_hakki]
-    );
+    if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+      // PostgreSQL
+      await pool.query(
+        `INSERT INTO maas_ayarlari 
+         (personel_id, saatlik_ucret, mesai_saati_ucret, gunluk_calisma_saati, aylik_izin_hakki) 
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (personel_id) 
+         DO UPDATE SET 
+           saatlik_ucret = EXCLUDED.saatlik_ucret,
+           mesai_saati_ucret = EXCLUDED.mesai_saati_ucret,
+           gunluk_calisma_saati = EXCLUDED.gunluk_calisma_saati,
+           aylik_izin_hakki = EXCLUDED.aylik_izin_hakki`,
+        [personel_id, saatlik_ucret, mesai_saati_ucret, gunluk_calisma_saati, aylik_izin_hakki]
+      );
+    } else {
+      // SQLite
+      await pool.run(
+        `INSERT OR REPLACE INTO maas_ayarlari 
+         (personel_id, saatlik_ucret, mesai_saati_ucret, gunluk_calisma_saati, aylik_izin_hakki) 
+         VALUES (?, ?, ?, ?, ?)`,
+        [personel_id, saatlik_ucret, mesai_saati_ucret, gunluk_calisma_saati, aylik_izin_hakki]
+      );
+    }
     res.json({ message: 'Maaş ayarları başarıyla kaydedildi' });
   } catch (error) {
     console.error('Maaş ayarları hatası:', error);
@@ -521,8 +532,15 @@ app.get('/api/maas-ayarlari/:personel_id', authenticateToken, async (req, res) =
   const { personel_id } = req.params;
 
   try {
-    const result = await pool.query('SELECT * FROM maas_ayarlari WHERE personel_id = $1', [personel_id]);
-    res.json(result.rows[0] || {});
+    if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+      // PostgreSQL
+      const result = await pool.query('SELECT * FROM maas_ayarlari WHERE personel_id = $1', [personel_id]);
+      res.json(result.rows[0] || {});
+    } else {
+      // SQLite
+      const result = await pool.all('SELECT * FROM maas_ayarlari WHERE personel_id = ?', [personel_id]);
+      res.json(result[0] || {});
+    }
   } catch (error) {
     console.error('Maaş ayarları getirme hatası:', error);
     res.status(500).json({ error: 'Veritabanı hatası' });
