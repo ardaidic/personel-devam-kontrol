@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -10,14 +10,21 @@ import {
   Container
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
+import API_CONFIG from '../config/api';
 
 const Login = () => {
   const [kullanici_adi, setKullaniciAdi] = useState('');
   const [sifre, setSifre] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Debug bilgisi göster
+    setDebugInfo(`API URL: ${API_CONFIG.baseURL}`);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,6 +72,12 @@ const Login = () => {
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
               {error}
+            </Alert>
+          )}
+
+          {debugInfo && (
+            <Alert severity="info" sx={{ width: '100%', mb: 2 }}>
+              {debugInfo}
             </Alert>
           )}
 
