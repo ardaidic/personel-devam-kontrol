@@ -27,8 +27,7 @@ import {
 } from '@mui/material';
 import {
   Calculate as CalculateIcon,
-  Settings as SettingsIcon,
-  AttachMoney as MoneyIcon
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 

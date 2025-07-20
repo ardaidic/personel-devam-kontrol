@@ -48,7 +48,7 @@ const QRCodeScanner = ({ onClose, open, onSuccess }) => {
         setScanner(null);
       }
     };
-  }, [open]);
+  }, [open, onScanSuccess, scanner]);
 
   const onScanSuccess = async (decodedText) => {
     if (scanning) {
