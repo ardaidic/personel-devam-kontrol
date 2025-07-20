@@ -106,6 +106,20 @@ const initDatabase = async () => {
           FOREIGN KEY (personel_id) REFERENCES personel (id)
         )
       `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS vardiya_planlari (
+          id SERIAL PRIMARY KEY,
+          personel_id INTEGER NOT NULL,
+          tarih DATE NOT NULL,
+          vardiya_tipi VARCHAR(20) DEFAULT 'normal',
+          gunluk_saat DECIMAL(4,2) DEFAULT 8.0,
+          durum VARCHAR(20) DEFAULT 'planlandi',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (personel_id) REFERENCES personel (id),
+          UNIQUE(personel_id, tarih)
+        )
+      `);
     } else {
       // SQLite tabloları
       await pool.run(`
@@ -171,6 +185,20 @@ const initDatabase = async () => {
           aktif BOOLEAN DEFAULT 1,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (personel_id) REFERENCES personel (id)
+        )
+      `);
+
+      await pool.run(`
+        CREATE TABLE IF NOT EXISTS vardiya_planlari (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          personel_id INTEGER NOT NULL,
+          tarih TEXT NOT NULL,
+          vardiya_tipi TEXT DEFAULT 'normal',
+          gunluk_saat REAL DEFAULT 8.0,
+          durum TEXT DEFAULT 'planlandi',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (personel_id) REFERENCES personel (id),
+          UNIQUE(personel_id, tarih)
         )
       `);
     }

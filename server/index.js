@@ -83,6 +83,35 @@ app.post('/api/create-test-user', async (req, res) => {
   }
 });
 
+// Kullanıcı kayıt
+app.post('/api/register', async (req, res) => {
+  const { kullanici_adi, sifre, rol, ad, soyad, email } = req.body;
+
+  try {
+    // Kullanıcı adı kontrolü
+    const existingUser = await pool.query('SELECT * FROM kullanici WHERE kullanici_adi = $1', [kullanici_adi]);
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanılıyor' });
+    }
+
+    const hashedPassword = bcrypt.hashSync(sifre, 10);
+    
+    const result = await pool.query(
+      'INSERT INTO kullanici (kullanici_adi, sifre, rol) VALUES ($1, $2, $3) RETURNING id',
+      [kullanici_adi, hashedPassword, rol || 'personel']
+    );
+
+    res.json({ 
+      id: result.rows[0].id, 
+      message: 'Kullanıcı başarıyla oluşturuldu',
+      user: { kullanici_adi, rol: rol || 'personel' }
+    });
+  } catch (error) {
+    console.error('Kullanıcı kayıt hatası:', error);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
 // Giriş
 app.post('/api/login', async (req, res) => {
   const { kullanici_adi, sifre } = req.body;
@@ -126,14 +155,29 @@ app.get('/api/personel', authenticateToken, async (req, res) => {
 
 // Personel ekle
 app.post('/api/personel', authenticateToken, async (req, res) => {
-  const { tc_no, ad, soyad, departman, pozisyon, email, telefon, ise_baslama_tarihi } = req.body;
+  const { tc_no, ad, soyad, departman, pozisyon, email, telefon, ise_baslama_tarihi, sifre } = req.body;
 
   try {
-    const result = await pool.query(
+    // Personel ekle
+    const personelResult = await pool.query(
       'INSERT INTO personel (tc_no, ad, soyad, departman, pozisyon, email, telefon, ise_baslama_tarihi) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
       [tc_no, ad, soyad, departman, pozisyon, email, telefon, ise_baslama_tarihi]
     );
-    res.json({ id: result.rows[0].id, message: 'Personel başarıyla eklendi' });
+    
+    const personelId = personelResult.rows[0].id;
+    
+    // Eğer şifre verilmişse kullanıcı hesabı oluştur
+    if (sifre) {
+      const hashedPassword = bcrypt.hashSync(sifre, 10);
+      const kullaniciAdi = `${ad.toLowerCase()}.${soyad.toLowerCase()}`;
+      
+      await pool.query(
+        'INSERT INTO kullanici (kullanici_adi, sifre, rol) VALUES ($1, $2, $3)',
+        [kullaniciAdi, hashedPassword, 'personel']
+      );
+    }
+    
+    res.json({ id: personelId, message: 'Personel başarıyla eklendi' });
   } catch (error) {
     if (error.code === '23505') { // Unique constraint violation
       return res.status(400).json({ error: 'Bu TC kimlik numarası zaten kayıtlı' });
@@ -481,6 +525,76 @@ app.get('/api/maas-ayarlari/:personel_id', authenticateToken, async (req, res) =
     res.json(result.rows[0] || {});
   } catch (error) {
     console.error('Maaş ayarları getirme hatası:', error);
+    res.status(500).json({ error: 'Veritabanı hatası' });
+  }
+});
+
+// Vardiya planı oluştur
+app.post('/api/vardiya-planla', authenticateToken, async (req, res) => {
+  const { personel_id, baslangic_tarihi, bitis_tarihi, vardiya_tipi, gunluk_saat } = req.body;
+
+  try {
+    const vardiyalar = [];
+    const baslangic = new Date(baslangic_tarihi);
+    const bitis = new Date(bitis_tarihi);
+    
+    for (let d = new Date(baslangic); d <= bitis; d.setDate(d.getDate() + 1)) {
+      const tarih = new Date(d);
+      const gun = tarih.getDay(); // 0 = Pazar, 1 = Pazartesi, ...
+      
+      // Hafta sonu kontrolü (Pazar = 0, Cumartesi = 6)
+      if (gun === 0 || gun === 6) {
+        continue; // Hafta sonu vardiya yok
+      }
+      
+      vardiyalar.push({
+        personel_id,
+        tarih: tarih.toISOString().split('T')[0],
+        vardiya_tipi: vardiya_tipi || 'normal',
+        gunluk_saat: gunluk_saat || 8,
+        durum: 'planlandi'
+      });
+    }
+    
+    // Veritabanına kaydet
+    for (const vardiya of vardiyalar) {
+      await pool.query(
+        'INSERT INTO vardiya_planlari (personel_id, tarih, vardiya_tipi, gunluk_saat, durum) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (personel_id, tarih) DO UPDATE SET vardiya_tipi = $3, gunluk_saat = $4, durum = $5',
+        [vardiya.personel_id, vardiya.tarih, vardiya.vardiya_tipi, vardiya.gunluk_saat, vardiya.durum]
+      );
+    }
+    
+    res.json({ 
+      message: 'Vardiya planı başarıyla oluşturuldu',
+      vardiya_sayisi: vardiyalar.length,
+      vardiyalar
+    });
+  } catch (error) {
+    console.error('Vardiya planlama hatası:', error);
+    res.status(500).json({ error: 'Veritabanı hatası' });
+  }
+});
+
+// Vardiya planlarını getir
+app.get('/api/vardiya-planlari/:personel_id', authenticateToken, async (req, res) => {
+  const { personel_id } = req.params;
+  const { ay, yil } = req.query;
+  
+  try {
+    let query = 'SELECT * FROM vardiya_planlari WHERE personel_id = $1';
+    let params = [personel_id];
+    
+    if (ay && yil) {
+      query += ' AND tarih LIKE $2';
+      params.push(`${yil}-${ay.padStart(2, '0')}%`);
+    }
+    
+    query += ' ORDER BY tarih';
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Vardiya planları getirme hatası:', error);
     res.status(500).json({ error: 'Veritabanı hatası' });
   }
 });
