@@ -115,6 +115,14 @@ const Login = () => {
             >
               {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
             </Button>
+
+            <Button
+              fullWidth
+              variant="text"
+              onClick={() => navigate('/register')}
+            >
+              Hesabın yok mu? Kayıt ol
+            </Button>
           </Box>
           
           <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>

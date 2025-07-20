@@ -41,7 +41,8 @@ const PersonelList = () => {
     pozisyon: '',
     email: '',
     telefon: '',
-    ise_baslama_tarihi: ''
+    ise_baslama_tarihi: '',
+    sifre: ''
   });
 
   useEffect(() => {
@@ -70,7 +71,8 @@ const PersonelList = () => {
         pozisyon: person.pozisyon,
         email: person.email || '',
         telefon: person.telefon || '',
-        ise_baslama_tarihi: person.ise_baslama_tarihi
+        ise_baslama_tarihi: person.ise_baslama_tarihi,
+        sifre: ''
       });
     } else {
       setEditingPersonel(null);
@@ -82,7 +84,8 @@ const PersonelList = () => {
         pozisyon: '',
         email: '',
         telefon: '',
-        ise_baslama_tarihi: ''
+        ise_baslama_tarihi: '',
+        sifre: ''
       });
     }
     setOpenDialog(true);
@@ -269,6 +272,17 @@ const PersonelList = () => {
               required
               InputLabelProps={{ shrink: true }}
             />
+            {!editingPersonel && (
+              <TextField
+                name="sifre"
+                label="Şifre (Opsiyonel)"
+                type="password"
+                value={formData.sifre}
+                onChange={handleInputChange}
+                fullWidth
+                helperText="Şifre girilirse kullanıcı hesabı oluşturulur"
+              />
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
