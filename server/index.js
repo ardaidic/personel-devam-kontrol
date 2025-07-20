@@ -52,6 +52,21 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Rol kontrolü middleware'i
+const requireRole = (roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Kullanıcı bilgisi bulunamadı' });
+    }
+    
+    if (!roles.includes(req.user.rol)) {
+      return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+    }
+    
+    next();
+  };
+};
+
 // Routes
 
 // Test kullanıcısı oluştur (sadece development için)
@@ -143,7 +158,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Personel listesi
-app.get('/api/personel', authenticateToken, async (req, res) => {
+app.get('/api/personel', authenticateToken, requireRole(['admin']), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM personel ORDER BY ad, soyad');
     res.json(result.rows);
@@ -154,7 +169,7 @@ app.get('/api/personel', authenticateToken, async (req, res) => {
 });
 
 // Personel ekle
-app.post('/api/personel', authenticateToken, async (req, res) => {
+app.post('/api/personel', authenticateToken, requireRole(['admin']), async (req, res) => {
   const { tc_no, ad, soyad, departman, pozisyon, email, telefon, ise_baslama_tarihi, sifre } = req.body;
 
   try {
@@ -188,7 +203,7 @@ app.post('/api/personel', authenticateToken, async (req, res) => {
 });
 
 // Personel güncelle
-app.put('/api/personel/:id', authenticateToken, async (req, res) => {
+app.put('/api/personel/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
   const { id } = req.params;
   const { tc_no, ad, soyad, departman, pozisyon, email, telefon, ise_baslama_tarihi, durum } = req.body;
 
@@ -209,7 +224,7 @@ app.put('/api/personel/:id', authenticateToken, async (req, res) => {
 });
 
 // Personel sil
-app.delete('/api/personel/:id', authenticateToken, async (req, res) => {
+app.delete('/api/personel/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -226,7 +241,7 @@ app.delete('/api/personel/:id', authenticateToken, async (req, res) => {
 });
 
 // Giriş kaydı
-app.post('/api/devam/giris', authenticateToken, async (req, res) => {
+app.post('/api/devam/giris', authenticateToken, requireRole(['admin']), async (req, res) => {
   const { personel_id } = req.body;
   const bugun = moment().format('YYYY-MM-DD');
   const simdi = moment().format('HH:mm:ss');
@@ -260,7 +275,7 @@ app.post('/api/devam/giris', authenticateToken, async (req, res) => {
 });
 
 // Çıkış kaydı
-app.post('/api/devam/cikis', authenticateToken, async (req, res) => {
+app.post('/api/devam/cikis', authenticateToken, requireRole(['admin']), async (req, res) => {
   const { personel_id } = req.body;
   const bugun = moment().format('YYYY-MM-DD');
   const simdi = moment().format('HH:mm:ss');
@@ -493,7 +508,7 @@ app.post('/api/qr/tarama', authenticateToken, async (req, res) => {
 // Maaş hesaplama API'leri
 
 // Maaş ayarları ekle/güncelle
-app.post('/api/maas-ayarlari', authenticateToken, async (req, res) => {
+app.post('/api/maas-ayarlari', authenticateToken, requireRole(['admin']), async (req, res) => {
   const { personel_id, saatlik_ucret, mesai_saati_ucret, gunluk_calisma_saati, aylik_izin_hakki } = req.body;
 
   try {
@@ -530,6 +545,11 @@ app.post('/api/maas-ayarlari', authenticateToken, async (req, res) => {
 // Maaş ayarlarını getir
 app.get('/api/maas-ayarlari/:personel_id', authenticateToken, async (req, res) => {
   const { personel_id } = req.params;
+  
+  // Personel sadece kendi maaş ayarlarını görebilir, admin hepsini görebilir
+  if (req.user.rol === 'personel' && req.user.id != personel_id) {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+  }
 
   try {
     if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
@@ -593,6 +613,98 @@ app.post('/api/vardiya-planla', authenticateToken, async (req, res) => {
   }
 });
 
+// Avans/Borç ekle
+app.post('/api/avans-borc', authenticateToken, requireRole(['admin']), async (req, res) => {
+  const { personel_id, tip, miktar, aciklama, tarih } = req.body;
+
+  try {
+    if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+      await pool.query(
+        'INSERT INTO avans_borclar (personel_id, tip, miktar, aciklama, tarih) VALUES ($1, $2, $3, $4, $5)',
+        [personel_id, tip, miktar, aciklama, tarih]
+      );
+    } else {
+      await pool.run(
+        'INSERT INTO avans_borclar (personel_id, tip, miktar, aciklama, tarih) VALUES (?, ?, ?, ?, ?)',
+        [personel_id, tip, miktar, aciklama, tarih]
+      );
+    }
+    res.json({ message: 'Avans/Borç başarıyla eklendi' });
+  } catch (error) {
+    console.error('Avans/Borç ekleme hatası:', error);
+    res.status(500).json({ error: 'Veritabanı hatası' });
+  }
+});
+
+// Avans/Borç listesi getir
+app.get('/api/avans-borc/:personel_id', authenticateToken, async (req, res) => {
+  const { personel_id } = req.params;
+  
+  // Personel sadece kendi avans/borçlarını görebilir
+  if (req.user.rol === 'personel' && req.user.id != personel_id) {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+  }
+
+  try {
+    if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+      const result = await pool.query('SELECT * FROM avans_borclar WHERE personel_id = $1 ORDER BY tarih DESC', [personel_id]);
+      res.json(result.rows);
+    } else {
+      const result = await pool.query('SELECT * FROM avans_borclar WHERE personel_id = ? ORDER BY tarih DESC', [personel_id]);
+      res.json(result.rows);
+    }
+  } catch (error) {
+    console.error('Avans/Borç getirme hatası:', error);
+    res.status(500).json({ error: 'Veritabanı hatası' });
+  }
+});
+
+// Maaş ödemesi kaydet
+app.post('/api/maas-odeme', authenticateToken, requireRole(['admin']), async (req, res) => {
+  const { personel_id, ay, yil, odeme_tutari, odeme_tarihi, aciklama } = req.body;
+
+  try {
+    if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+      await pool.query(
+        'INSERT INTO maas_odemeleri (personel_id, ay, yil, odeme_tutari, odeme_tarihi, aciklama) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (personel_id, ay, yil) DO UPDATE SET odeme_tutari = $4, odeme_tarihi = $5, aciklama = $6',
+        [personel_id, ay, yil, odeme_tutari, odeme_tarihi, aciklama]
+      );
+    } else {
+      await pool.run(
+        'INSERT OR REPLACE INTO maas_odemeleri (personel_id, ay, yil, odeme_tutari, odeme_tarihi, aciklama) VALUES (?, ?, ?, ?, ?, ?)',
+        [personel_id, ay, yil, odeme_tutari, odeme_tarihi, aciklama]
+      );
+    }
+    res.json({ message: 'Maaş ödemesi başarıyla kaydedildi' });
+  } catch (error) {
+    console.error('Maaş ödeme hatası:', error);
+    res.status(500).json({ error: 'Veritabanı hatası' });
+  }
+});
+
+// Maaş ödemelerini getir
+app.get('/api/maas-odemeleri/:personel_id', authenticateToken, async (req, res) => {
+  const { personel_id } = req.params;
+  
+  // Personel sadece kendi maaş ödemelerini görebilir
+  if (req.user.rol === 'personel' && req.user.id != personel_id) {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+  }
+
+  try {
+    if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+      const result = await pool.query('SELECT * FROM maas_odemeleri WHERE personel_id = $1 ORDER BY yil DESC, ay DESC', [personel_id]);
+      res.json(result.rows);
+    } else {
+      const result = await pool.query('SELECT * FROM maas_odemeleri WHERE personel_id = ? ORDER BY yil DESC, ay DESC', [personel_id]);
+      res.json(result.rows);
+    }
+  } catch (error) {
+    console.error('Maaş ödemeleri getirme hatası:', error);
+    res.status(500).json({ error: 'Veritabanı hatası' });
+  }
+});
+
 // Vardiya planlarını getir
 app.get('/api/vardiya-planlari/:personel_id', authenticateToken, async (req, res) => {
   const { personel_id } = req.params;
@@ -621,6 +733,11 @@ app.get('/api/vardiya-planlari/:personel_id', authenticateToken, async (req, res
 app.get('/api/maas-hesapla/:personel_id', authenticateToken, async (req, res) => {
   const { personel_id } = req.params;
   const { ay, yil } = req.query;
+  
+  // Personel sadece kendi maaşını hesaplayabilir
+  if (req.user.rol === 'personel' && req.user.id != personel_id) {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+  }
   
   const hedef_ay = ay || moment().format('MM');
   const hedef_yil = yil || moment().format('YYYY');
@@ -661,9 +778,28 @@ app.get('/api/maas-hesapla/:personel_id', authenticateToken, async (req, res) =>
       }
     });
 
+    // Avans/Borç hesapla
+    const avansBorcResult = await pool.query(
+      `SELECT * FROM avans_borclar 
+       WHERE personel_id = $1 AND tarih LIKE $2 AND odendi = false`,
+      [personel_id, `${hedef_yil}-${hedef_ay}%`]
+    );
+
+    let toplam_avans = 0;
+    let toplam_borc = 0;
+
+    avansBorcResult.rows.forEach(kayit => {
+      if (kayit.tip === 'avans') {
+        toplam_avans += parseFloat(kayit.miktar);
+      } else if (kayit.tip === 'borc') {
+        toplam_borc += parseFloat(kayit.miktar);
+      }
+    });
+
     const normal_ucret = normal_saat * maasAyarlari.saatlik_ucret;
     const mesai_ucret = mesai_saati * maasAyarlari.mesai_saati_ucret;
-    const toplam_ucret = normal_ucret + mesai_ucret;
+    const brüt_ucret = normal_ucret + mesai_ucret;
+    const net_ucret = brüt_ucret - toplam_avans + toplam_borc;
 
     res.json({
       ay: hedef_ay,
@@ -674,7 +810,10 @@ app.get('/api/maas-hesapla/:personel_id', authenticateToken, async (req, res) =>
       mesai_saati: mesai_saati.toFixed(2),
       normal_ucret: normal_ucret.toFixed(2),
       mesai_ucret: mesai_ucret.toFixed(2),
-      toplam_ucret: toplam_ucret.toFixed(2),
+      brüt_ucret: brüt_ucret.toFixed(2),
+      toplam_avans: toplam_avans.toFixed(2),
+      toplam_borc: toplam_borc.toFixed(2),
+      net_ucret: net_ucret.toFixed(2),
       saatlik_ucret: maasAyarlari.saatlik_ucret,
       mesai_saati_ucret: maasAyarlari.mesai_saati_ucret
     });

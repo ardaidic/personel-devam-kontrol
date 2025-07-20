@@ -121,6 +121,37 @@ const initDatabase = async () => {
           UNIQUE(personel_id, tarih)
         )
       `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS avans_borclar (
+          id SERIAL PRIMARY KEY,
+          personel_id INTEGER NOT NULL,
+          tip VARCHAR(20) NOT NULL CHECK (tip IN ('avans', 'borc')),
+          miktar DECIMAL(10,2) NOT NULL,
+          aciklama TEXT,
+          tarih DATE NOT NULL,
+          odendi BOOLEAN DEFAULT false,
+          odeme_tarihi DATE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (personel_id) REFERENCES personel (id)
+        )
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS maas_odemeleri (
+          id SERIAL PRIMARY KEY,
+          personel_id INTEGER NOT NULL,
+          ay INTEGER NOT NULL,
+          yil INTEGER NOT NULL,
+          odeme_tutari DECIMAL(10,2) NOT NULL,
+          odeme_tarihi DATE NOT NULL,
+          odendi BOOLEAN DEFAULT false,
+          aciklama TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (personel_id) REFERENCES personel (id),
+          UNIQUE(personel_id, ay, yil)
+        )
+      `);
     } else {
       // SQLite tabloları
       await pool.run(`
@@ -201,6 +232,37 @@ const initDatabase = async () => {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (personel_id) REFERENCES personel (id),
           UNIQUE(personel_id, tarih)
+        )
+      `);
+
+      await pool.run(`
+        CREATE TABLE IF NOT EXISTS avans_borclar (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          personel_id INTEGER NOT NULL,
+          tip TEXT NOT NULL CHECK (tip IN ('avans', 'borc')),
+          miktar REAL NOT NULL,
+          aciklama TEXT,
+          tarih TEXT NOT NULL,
+          odendi BOOLEAN DEFAULT 0,
+          odeme_tarihi TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (personel_id) REFERENCES personel (id)
+        )
+      `);
+
+      await pool.run(`
+        CREATE TABLE IF NOT EXISTS maas_odemeleri (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          personel_id INTEGER NOT NULL,
+          ay INTEGER NOT NULL,
+          yil INTEGER NOT NULL,
+          odeme_tutari REAL NOT NULL,
+          odeme_tarihi TEXT NOT NULL,
+          odendi BOOLEAN DEFAULT 0,
+          aciklama TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (personel_id) REFERENCES personel (id),
+          UNIQUE(personel_id, ay, yil)
         )
       `);
     }
