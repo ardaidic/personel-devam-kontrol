@@ -57,15 +57,29 @@ const authenticateToken = (req, res, next) => {
 // Test kullanıcısı oluştur (sadece development için)
 app.post('/api/create-test-user', async (req, res) => {
   try {
+    console.log('Test kullanıcısı oluşturma başladı');
+    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Mevcut' : 'Yok');
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    
     const hashedPassword = bcrypt.hashSync('admin123', 10);
-    await pool.query(
-      'INSERT INTO kullanici (kullanici_adi, sifre, rol) VALUES ($1, $2, $3) ON CONFLICT (kullanici_adi) DO NOTHING',
+    console.log('Şifre hash edildi');
+    
+    const result = await pool.query(
+      'INSERT INTO kullanici (kullanici_adi, sifre, rol) VALUES ($1, $2, $3) ON CONFLICT (kullanici_adi) DO NOTHING RETURNING id',
       ['admin', hashedPassword, 'admin']
     );
-    res.json({ message: 'Test kullanıcısı oluşturuldu veya zaten mevcut' });
+    console.log('Veritabanı sorgusu tamamlandı:', result);
+    
+    res.json({ message: 'Test kullanıcısı oluşturuldu veya zaten mevcut', result });
   } catch (error) {
     console.error('Test kullanıcısı oluşturma hatası:', error);
-    res.status(500).json({ error: 'Test kullanıcısı oluşturulamadı' });
+    console.error('Hata detayı:', error.message);
+    console.error('Hata kodu:', error.code);
+    res.status(500).json({ 
+      error: 'Test kullanıcısı oluşturulamadı',
+      details: error.message,
+      code: error.code
+    });
   }
 });
 
