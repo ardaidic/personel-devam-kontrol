@@ -538,8 +538,8 @@ app.get('/api/maas-ayarlari/:personel_id', authenticateToken, async (req, res) =
       res.json(result.rows[0] || {});
     } else {
       // SQLite
-      const result = await pool.all('SELECT * FROM maas_ayarlari WHERE personel_id = ?', [personel_id]);
-      res.json(result[0] || {});
+      const result = await pool.query('SELECT * FROM maas_ayarlari WHERE personel_id = ?', [personel_id]);
+      res.json(result.rows[0] || {});
     }
   } catch (error) {
     console.error('Maaş ayarları getirme hatası:', error);
