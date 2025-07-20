@@ -15,6 +15,22 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
+// Ana sayfa endpoint'i
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Personel Devam Kontrol API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      login: '/api/login',
+      personel: '/api/personel',
+      devam: '/api/devam',
+      qr: '/api/qr',
+      maas: '/api/maas'
+    }
+  });
+});
+
 // Veritabanını başlat
 initDatabase();
 
