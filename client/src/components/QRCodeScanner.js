@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -48,9 +48,9 @@ const QRCodeScanner = ({ onClose, open, onSuccess }) => {
         setScanner(null);
       }
     };
-  }, [open, onScanSuccess, scanner]);
+  }, [open, scanner]);
 
-  const onScanSuccess = async (decodedText) => {
+  const onScanSuccess = useCallback(async (decodedText) => {
     if (scanning) {
       setScanning(false);
       scanner.clear();
@@ -77,7 +77,7 @@ const QRCodeScanner = ({ onClose, open, onSuccess }) => {
         });
       }
     }
-  };
+  }, [scanning, scanner, onSuccess]);
 
   const onScanFailure = (error) => {
     // Hata durumunda sessizce devam et
