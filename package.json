@@ -11,10 +11,18 @@
     "start": "cd server && npm start",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install"
   },
-  "keywords": ["personel", "devam", "kontrol", "attendance"],
+  "keywords": [
+    "personel",
+    "devam",
+    "kontrol",
+    "attendance"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7"
   }
-} 
+}
