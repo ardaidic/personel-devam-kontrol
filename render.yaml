@@ -3,7 +3,7 @@ services:
     name: personel-devam-kontrol-backend
     env: node
     plan: free
-    buildCommand: npm run install-all
+    buildCommand: npm install && cd server && npm install && cd ../client && npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
